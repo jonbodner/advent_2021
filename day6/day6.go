@@ -6,12 +6,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 func main() {
 	part1()
-	//part2()
+	part2()
 }
 
 /*
@@ -79,63 +80,42 @@ func part1() {
 
 func part2() {
 	in := getInitial()
-	//fmt.Println(in)
-	in = []byte{0 /*3, 4, 3, 1, 2*/}
-	// calculating fast: how many does each one make?
-	/*
-			256 days
-		#0 starts with 3, so will reproduce trunc((256-3)/6) times
-			day N is the first day it will reproduce, then every 6 days.
-			each one reproduces is N+8, then every 6 days.
+	lookup := make([]int, 7)
+	var wg sync.WaitGroup
+	wg.Add(7)
+	for i := 0; i <= 6; i++ {
+		go func(i int) {
+			start := time.Now()
+			curSum := sumIt(i)
+			lookup[i] = curSum
+			fmt.Println(i, curSum, time.Now().Sub(start))
+			wg.Done()
+		}(i)
 
-	*/
-
-	start := time.Now()
-	pos := 0
-	for {
-		if pos == len(in) {
-			break
-		}
-		//look at value at current location
-		numAppended := byte(0)
-		for i := int(in[pos]) + 1; i <= 256; i = i + 7 {
-			newVal := 9 + 7*numAppended + in[pos]
-			//fmt.Println("on day", i, " adding", newVal)
-			in = append(in, newVal)
-			numAppended++
-		}
-		pos++
-		//runtime.GC()
-		//fmt.Println(len(in))
 	}
-	fmt.Println(len(in))
-	fmt.Println(time.Now().Sub(start))
-}
-
-func part2b() {
-	in := getInitial()
-	//fmt.Println(in)
-	in = []byte{3, 4, 3, 1, 2}
-	// calculating fast: how many does each one make?
-	/*
-		The formula for compound interest is P (1 + r/n)^(nt), where
-		P is the initial principal balance,
-		r is the interest rate,
-		n is the number of times interest is compounded per time period and
-		t is the number of time periods.
-
-		P = 1
-		r = 1
-		n = 1
-		t = (80-start#)/7
-
-	*/
-	total := 0
+	wg.Wait()
+	total := len(in)
 	for _, v := range in {
-		exp := (80 - v) / 7
-		total += int(math.Pow(2, float64(exp)))
+		total += lookup[v]
 	}
 	fmt.Println(total)
+}
+
+func sumIt(pos int) int {
+	//fmt.Println("in sumIt starting at ", pos)
+	made := int(math.Ceil((256 - float64(pos)) / 7))
+	if made < 0 {
+		return 0
+	}
+	//fmt.Println(made)
+	total := made
+	for i := 0; i <= made; i++ {
+		p := pos + 9 + 7*i
+		if p < 256 {
+			total += sumIt(p)
+		}
+	}
+	return total
 }
 
 func getInitial() []byte {
