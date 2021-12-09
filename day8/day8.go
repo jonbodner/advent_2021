@@ -166,11 +166,14 @@ func (p *Part2) Process(s string) {
 	association := map[string]string{}
 	// item that's in 7, but not in 1 is a
 	// 1 is len 2, 7 is len 3
-	association["a"] = returnDiff(possible[2][0], possible[3][0])
+	one := possible[2][0]
+	seven := possible[3][0]
+	association["a"] = returnDiff(one, seven)
 	fmt.Println("a is", association["a"])
 	// other fields in 4 are b and d
 	// 1 is len 2, 4 is len 4
-	bd := returnDiff(possible[2][0], possible[4][0])
+	four := possible[4][0]
+	bd := returnDiff(one, four)
 	fmt.Println(bd)
 	// if it's in all of length 6, it's b
 	// if it's in 2 of length 6, it's d
@@ -196,10 +199,10 @@ func (p *Part2) Process(s string) {
 		if len(remaining) == 2 {
 			fmt.Println(remaining)
 			// the one in 5 but not in 1 is g
-			association["g"] = returnDiff(possible[2][0], remaining)
+			association["g"] = returnDiff(one, remaining)
 			fmt.Println("g is", association["g"])
 			// the one in 1 but not in 5 is c
-			association["c"] = returnDiff(remaining, possible[2][0])
+			association["c"] = returnDiff(remaining, one)
 			fmt.Println("c is", association["c"])
 			// the unknown one in 5 and 1 is f
 			known = known + association["g"] + association["c"]
