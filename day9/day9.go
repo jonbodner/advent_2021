@@ -116,6 +116,7 @@ func part2() {
 	*/
 	grid := getInitial()
 	var colors [][]int
+	colorList := map[int]int{}
 	curColor := 1
 	in9 := false
 	for y, row := range grid {
@@ -131,42 +132,40 @@ func part2() {
 			}
 			in9 = false
 			colors[y] = append(colors[y], curColor)
+			colorList[curColor]++
 		}
 		// change color at end of row
 		curColor++
 	}
 
 	printGrid(colors)
+	fmt.Println(colorList)
 	// unification pass, check the cell above, see if it's a different color,
 	// if so change all of the same color to the color of the cell above
 	for y := 1; y < len(colors); y++ {
 		for x := 0; x < len(colors[y]); x++ {
 			curColor := colors[y][x]
+			// if we've already merged this color, skip
+			if _, ok := colorList[curColor]; !ok {
+				continue
+			}
 			upColor := colors[y-1][x]
 			if curColor != -1 && upColor != -1 && curColor != upColor {
-				for y := 0; y < len(colors); y++ {
-					for x := 0; x < len(colors[y]); x++ {
-						if colors[y][x] == curColor {
-							colors[y][x] = upColor
-						}
+				colorList[upColor] += colorList[curColor]
+				delete(colorList, curColor)
+				for x1 := 0; x1 < len(colors[y]); x1++ {
+					if colors[y][x1] == curColor {
+						colors[y][x1] = upColor
 					}
 				}
 			}
 		}
 	}
 	printGrid(colors)
+	fmt.Println(colorList)
 	// now count and sort and multiply
-	vals := map[int]int{}
-	for y := 0; y < len(colors); y++ {
-		for x := 0; x < len(colors[y]); x++ {
-			if colors[y][x] != -1 {
-				vals[colors[y][x]]++
-			}
-		}
-	}
-	fmt.Println(vals)
-	totals := make([]int, 0, len(vals))
-	for _, v := range vals {
+	totals := make([]int, 0, len(colorList))
+	for _, v := range colorList {
 		totals = append(totals, v)
 	}
 	sort.Ints(totals)
@@ -175,7 +174,7 @@ func part2() {
 }
 
 func printGrid(colors [][]int) {
-	curSymbol := 'a'
+	curSymbol := '¡'
 	for i := 0; i < len(colors); i++ {
 		for j := 0; j < len(colors[i]); j++ {
 			fmt.Print(string(curSymbol + rune(colors[i][j])))
