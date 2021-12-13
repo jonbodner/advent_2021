@@ -10,8 +10,12 @@ import (
 )
 
 func main() {
-	process(&Part1{})
-	process(&Part2{})
+	process(&Part1{
+		nodes: map[string]*Node{},
+	})
+	process(&Part2{
+		nodes: map[string]*Node{},
+	})
 }
 
 /*
@@ -127,22 +131,18 @@ func (p *Part2) Process(s string) {
 }
 
 func (p *Part2) buildFindNode(nodeName string) *Node {
-	if node, ok := p.nodes[nodeName]; !ok {
-		node = &Node{
-			name: nodeName,
-			big:  unicode.IsUpper(rune(nodeName[0])),
-		}
-		if p.nodes == nil {
-			p.nodes = map[string]*Node{}
-		}
-		p.nodes[nodeName] = node
-		if nodeName == "start" {
-			p.startNode = node
-		}
-		return node
-	} else {
+	if node, ok := p.nodes[nodeName]; ok {
 		return node
 	}
+	node := &Node{
+		name: nodeName,
+		big:  unicode.IsUpper(rune(nodeName[0])),
+	}
+	p.nodes[nodeName] = node
+	if nodeName == "start" {
+		p.startNode = node
+	}
+	return node
 }
 
 func (p *Part2) Result() int {
@@ -199,7 +199,7 @@ outer:
 				}
 			}
 		}
-		newPath := make([]*Node, len(path), len(path)+10)
+		newPath := make([]*Node, len(path), len(path)+1)
 		copy(newPath, path)
 		newPath = append(newPath, v)
 		total += findPaths2(v, newPath, doubleSmall)
