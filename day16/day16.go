@@ -188,8 +188,8 @@ func operator(s string, bits string, t *Packet) (string, string) {
 			bits += hexToBits(s[0])
 			s = s[1:]
 		}
-		startBits := bits
-		for len(startBits)-len(bits) != int(subPacketLen) {
+		startCount := len(bits)
+		for startCount-len(bits) != int(subPacketLen) {
 			var subPacket Packet
 			s, bits = header(s, bits, &subPacket)
 			t.SubPackets = append(t.SubPackets, subPacket)
