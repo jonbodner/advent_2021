@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"math"
 	"os"
@@ -114,57 +113,19 @@ type Packet struct {
 	SubPackets []Packet
 }
 
-func header(s string, bits string, t *Packet) (string, string) {
-	if len(bits) < 3 {
-		bits += hexToBits(s[0])
-		s = s[1:]
-	}
+func header(bits string, t *Packet) string {
 	t.Version = read3(&bits)
-	if len(bits) < 3 {
-		bits += hexToBits(s[0])
-		s = s[1:]
-	}
 	t.TypeID = read3(&bits)
 	switch t.TypeID {
 	case 4:
-		s, bits = literal(s, bits, t)
+		bits = literal(bits, t)
 	default:
-		s, bits = operator(s, bits, t)
+		bits = operator(bits, t)
 	}
-	return s, bits
+	return bits
 }
 
-/*
-If the length type ID is 0, then the next 15 bits are a number that represents the total length in bits of the sub-packets contained by this packet.
-If the length type ID is 1, then the next 11 bits are a number that represents the number of sub-packets immediately contained by this packet.
-Finally, after the length type ID bit and the 15-bit or 11-bit field, the sub-packets appear.
-
-For example, here is an operator packet (hexadecimal string 38006F45291200) with length type ID 0 that contains two sub-packets:
-
-001 110 0 000000000011011 110100010100101001000100100 000 0000
-VVV TTT I LLLLLLLLLLLLLLL AAAAAAAAAAABBBBBBBBBBBBBBBB
-The three bits labeled V (001) are the packet version, 1.
-The three bits labeled T (110) are the packet type ID, 6, which means the packet is an operator.
-The bit labeled I (0) is the length type ID, which indicates that the length is a 15-bit number representing the number of bits in the sub-packets.
-The 15 bits labeled L (000000000011011) contain the length of the sub-packets in bits, 27.
-The 11 bits labeled A contain the first sub-packet, a literal value representing the number 10.
-The 16 bits labeled B contain the second sub-packet, a literal value representing the number 20.
-After reading 11 and 16 bits of sub-packet data, the total length indicated in L (27) is reached, and so parsing of this packet stops.
-
-As another example, here is an operator packet (hexadecimal string EE00D40C823060) with length type ID 1 that contains three sub-packets:
-
-11101110000000001101010000001100100000100011000001100000
-VVVTTTILLLLLLLLLLLAAAAAAAAAAABBBBBBBBBBBCCCCCCCCCCC
-The three bits labeled V (111) are the packet version, 7.
-The three bits labeled T (011) are the packet type ID, 3, which means the packet is an operator.
-The bit labeled I (1) is the length type ID, which indicates that the length is a 11-bit number representing the number of sub-packets.
-The 11 bits labeled L (00000000011) contain the number of sub-packets, 3.
-The 11 bits labeled A contain the first sub-packet, a literal value representing the number 1.
-The 11 bits labeled B contain the second sub-packet, a literal value representing the number 2.
-The 11 bits labeled C contain the third sub-packet, a literal value representing the number 3.
-After reading 3 complete sub-packets, the number of sub-packets indicated in L (3) is reached, and so parsing of this packet stops.
-*/
-func operator(s string, bits string, t *Packet) (string, string) {
+func operator(bits string, t *Packet) string {
 	// check the first bit, see if it's a 1 or 0
 	b := bits[0]
 	bits = bits[1:]
@@ -175,47 +136,31 @@ func operator(s string, bits string, t *Packet) (string, string) {
 	case '1':
 		lenField = 11
 	}
-	for len(bits) < lenField {
-		bits += hexToBits(s[0])
-		s = s[1:]
-	}
 	subPacketLen, _ := strconv.ParseInt(bits[:lenField], 2, 64)
 	bits = bits[lenField:]
 	switch b {
 	case '0':
 		//total number of bits
-		for len(bits) < int(subPacketLen) {
-			bits += hexToBits(s[0])
-			s = s[1:]
-		}
 		startCount := len(bits)
 		for startCount-len(bits) != int(subPacketLen) {
 			var subPacket Packet
-			s, bits = header(s, bits, &subPacket)
+			bits = header(bits, &subPacket)
 			t.SubPackets = append(t.SubPackets, subPacket)
 		}
 	case '1':
 		for i := 0; i < int(subPacketLen); i++ {
 			// next group of 11
-			for len(bits) < 11 {
-				bits += hexToBits(s[0])
-				s = s[1:]
-			}
 			var subPacket Packet
-			s, bits = header(s, bits, &subPacket)
+			bits = header(bits, &subPacket)
 			t.SubPackets = append(t.SubPackets, subPacket)
 		}
 	}
-	return s, bits
+	return bits
 }
 
-func literal(s string, bits string, t *Packet) (string, string) {
+func literal(bits string, t *Packet) string {
 	toParse := ""
 	for {
-		for len(bits) < 5 {
-			bits += hexToBits(s[0])
-			s = s[1:]
-		}
 		flag := bits[0]
 		toParse += bits[1:5]
 		bits = bits[5:]
@@ -226,7 +171,7 @@ func literal(s string, bits string, t *Packet) (string, string) {
 
 	val, _ := strconv.ParseInt(toParse, 2, 64)
 	t.Literal = int(val)
-	return s, bits
+	return bits
 }
 
 func read3(s *string) int {
@@ -258,9 +203,18 @@ func hexToBits(b byte) string {
 	return hexLookup[b]
 }
 
+func convertInput(s string) string {
+	out := make([]byte, len(s)*4)
+	for i, v := range s {
+		copy(out[i*4:(i+1)*4], hexToBits(byte(v)))
+	}
+	return string(out)
+}
+
 func (p *Part1) Process(s string) {
 	var nt Packet
-	s, _ = header(s, "", &nt)
+	bits := convertInput(s)
+	header(bits, &nt)
 	p.Packet = nt
 	fmt.Printf("%+v\n", p)
 }
@@ -284,7 +238,8 @@ type Part2 struct {
 
 func (p *Part2) Process(s string) {
 	var nt Packet
-	s, _ = header(s, "", &nt)
+	bits := convertInput(s)
+	header(bits, &nt)
 	p.Packet = nt
 	fmt.Printf("%+v\n", p)
 }
@@ -363,17 +318,10 @@ type Processor interface {
 }
 
 func process(p Processor) {
-	f, err := os.Open("./day16/input.txt")
+	data, err := os.ReadFile("./day16/input.txt")
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-
-	scanner.Split(bufio.ScanLines)
-
-	for scanner.Scan() {
-		p.Process(scanner.Text())
-	}
+	p.Process(string(data))
 	fmt.Println(p.Result())
 }
