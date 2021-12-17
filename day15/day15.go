@@ -142,7 +142,7 @@ that current path is replaced with this alt path.
 22      return dist[], prev[]
 */
 func dijkstra(graph [][]byte, source point) (map[point]int, map[point]point) {
-	q := map[point]bool{}
+	q := make(map[point]bool, len(graph)*len(graph))
 	dist := map[point]int{}
 	prev := map[point]point{}
 	for i := 0; i < len(graph); i++ {
